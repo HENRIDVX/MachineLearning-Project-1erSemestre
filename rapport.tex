@@ -26,12 +26,11 @@
 \begin{titlepage}
     \centering
     {\Large Machine Learning Project}\\[1cm]
-    {\Huge \textbf{Predicting the VIX Index Using\\
-    Market and Macro Features}}\\[1.5cm]
+    {\Huge \textbf{Predicting the VIX Index\\
+    Using Market and Macro Data}}\\[1.5cm]
 
-    {\large Author(s): TODO Names}\\[0.5cm]
-    {\large Program / Major: TODO}\\[0.5cm]
-    {\large Date: \today}\\[2cm]
+    {\large Authors: COSMANO, DAVROUX, ETHEVE}\\[0.5cm]
+    {\large Date: \tomorrow}\\[2cm]
 
     \vfill
 \end{titlepage}
@@ -43,38 +42,52 @@
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 
-In this project, we study whether the VIX index, often called the ``fear index'' of the US equity market, can be predicted using market and macroeconomic variables. 
-We build a daily dataset from January 2020 to December 2023 using Yahoo Finance and other public sources. 
-Our explanatory variables include the S\&P 500 index level and volume, commodity and energy prices (metals, oil, uranium), US Treasury yields, and the volatility-of-volatility index (VVIX).
-We perform exploratory data analysis, correlation analysis and feature engineering (rolling volatility, SMA, RSI, and Principal Component Analysis for highly correlated assets).
-We then train several regression models (Linear Regression, Random Forest, Gradient Boosting) to predict the VIX closing level.
-Our results show low predictive power, with $R^2$ close to zero or negative on the test set.
-We discuss the reasons for these poor performances (noise, time-series nature of the data, lack of lags) and outline possible improvements such as adding lagged variables, changing the prediction target, and using time-series specific models.
+In this project, we try to predict the VIX index using different financial variables.
+The VIX is often called the ``fear index'' because it measures the implied volatility of the S\&P 500.
+Our goal is not only to build a good model, but also to go through a full machine learning workflow as students: collect data, explore it, build features, train models and discuss the results.
+
+We download daily data between January 2020 and December 2023 with Python and the \texttt{yfinance} library.
+We use the S\&P 500 index, commodities (metals), energy prices, US interest rates and another volatility index (VVIX).
+We compute several indicators such as returns, rolling volatility, moving averages and PCA components.
+
+Then we try three regression models: Linear Regression, Random Forest and Gradient Boosting.
+The results are not very good: the $R^2$ on the test set is close to zero or even negative.
+This shows that predicting the daily level of VIX with standard models and same-day information is difficult.
+In the conclusion, we discuss why this happens and how we could improve the approach in the future.
 
 \newpage
 
 % ---------- 1. INTRODUCTION ----------
 \chapter{Introduction}
 
-The VIX index measures the implied volatility of S\&P 500 options and is widely interpreted as a ``fear index'' for financial markets.
-High levels of VIX are typically associated with periods of stress, uncertainty or crisis.
+In this project, we study the VIX, which is the volatility index of the S\&P 500.
+It is often used as a measure of fear on the financial markets: when the VIX is high, investors are nervous and expect large price movements; when it is low, the market is more calm.
 
-The goal of this project is to investigate whether the VIX can be predicted using market and macroeconomic indicators.
-In particular, we aim to answer the following question:
+We asked ourselves a simple question:
 
 \begin{quote}
-\textit{Can we predict daily VIX levels using information from the equity market, commodity and energy markets, interest rates and the VVIX index?}
+\textit{Can we predict the level of the VIX using other financial data such as the S\&P 500, commodities, energy and interest rates?}
 \end{quote}
 
-This question is relevant for risk management and asset allocation: 
-being able to anticipate changes in market volatility could help investors adjust their exposure to risky assets more efficiently.
+Our main objective is to apply the machine learning methods that we saw in class on a real financial problem.
+We know that predicting financial time series is hard, so we do not expect a perfect model, but we want to:
+\begin{itemize}
+    \item build a clean dataset from real data,
+    \item explore the relationships between variables,
+    \item create relevant features,
+    \item try different regression models,
+    \item and understand why the models work or not.
+\end{itemize}
+
+We adopt a very practical approach.
+We start from raw market data, we experiment, we make mistakes, we adjust our choices and we try to explain our results as clearly as possible.
 
 This report is organised as follows.
-In Chapter~\ref{chap:data} we describe the dataset and data sources.
-In Chapter~\ref{chap:features} we present our exploratory data analysis and feature engineering.
-Chapter~\ref{chap:models} describes the modelling approach and algorithms used.
-In Chapter~\ref{chap:results} we discuss the experimental results.
-Finally, Chapter~\ref{chap:conclusion} concludes and outlines possible improvements.
+In Chapter~\ref{chap:data}, we describe the dataset and the sources.
+In Chapter~\ref{chap:features}, we present our exploratory analysis and feature engineering.
+In Chapter~\ref{chap:models}, we explain our modelling choices.
+In Chapter~\ref{chap:results}, we show the results and discuss them.
+Finally, in Chapter~\ref{chap:conclusion}, we summarise what we learned and give ideas for future work.
 
 % ---------- 2. DATASET ----------
 \chapter{Dataset and Data Sources}
@@ -82,113 +95,179 @@ Finally, Chapter~\ref{chap:conclusion} concludes and outlines possible improveme
 
 \section{Data Sources}
 
-We collect daily financial data between 2020-01-01 and 2023-12-01 using the \texttt{yfinance} Python package and public CSV files.
+We work with daily financial data from 2020-01-01 to 2023-12-01.
+We use the Python library \texttt{yfinance} to download most of the series from Yahoo Finance.
 
 \begin{itemize}
-    \item \textbf{Target:} VIX index (\texttt{\^{}VIX}) closing level.
-    \item \textbf{Equity market:} S\&P 500 index (\texttt{\^{}GSPC}) closing price and trading volume.
-    \item \textbf{Commodities and metals:} Copper (HG=F), Aluminium (ALI=F), Gold (GC=F), Silver (SI=F), Nickel ETF (JJN), Zinc ETF (ZINC.L).
-    \item \textbf{Energy:} Crude Oil (CL=F), Natural Gas (NG=F), Uranium ETF (URA).
-    \item \textbf{Interest rates:} 10-year US Treasury yield (\texttt{\^{}TNX}) and 3-month T-bill (\texttt{\^{}IRX}).
-    \item \textbf{Volatility-of-volatility:} VVIX index (\texttt{\^{}VVIX}).
-    \item \textbf{S\&P 500 constituents:} list of companies and their market capitalisation from the DataHub S\&P 500 constituents dataset.
+    \item \textbf{Target}: VIX index (\texttt{\^{}VIX}), we use the closing value each day.
+    \item \textbf{Equity market}: S\&P 500 index (\texttt{\^{}GSPC}), closing price and trading volume.
+    \item \textbf{Metals}: Copper (HG=F), Aluminium (ALI=F), Gold (GC=F), Silver (SI=F), Nickel ETF (JJN), Zinc ETF (ZINC.L).
+    \item \textbf{Energy}: Crude Oil (CL=F), Natural Gas (NG=F), Uranium ETF (URA).
+    \item \textbf{Interest rates}: US 10-year Treasury yield (\texttt{\^{}TNX}) and 3-month T-bill (\texttt{\^{}IRX}).
+    \item \textbf{Volatility of volatility}: VVIX index (\texttt{\^{}VVIX}).
+    \item \textbf{S\&P 500 constituents}: list of companies and their market capitalisation from the DataHub S\&P 500 constituents dataset.
 \end{itemize}
 
-All series are aligned on trading days and merged using the date as an index.
-Rows with missing values are dropped after feature construction.
+We align all series by date and keep only the days where we have all the necessary values.
+When a series was not very useful (for example the very short-term interest rate), we still mention it but we do not include it in the final model.
 
-\section{Descriptive Statistics}
+\section{Basic Description}
 
-TODO: briefly comment on the number of rows/columns, sample period, basic statistics (mean, std, min, max) and include a table or figure if needed.
+Our final dataset covers almost four years with one line per trading day.
+The number of usable observations after cleaning is around TODO [number of rows to fill].
+Each line contains:
+\begin{itemize}
+    \item the VIX close (our target),
+    \item raw variables such as S\&P 500 close and volume,
+    \item and the features that we describe in the next chapter.
+\end{itemize}
 
-% Example figure
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{sp500_close.png}
-    \caption{Evolution of the S\&P 500 closing price over the sample period.}
-    \label{fig:sp500_close}
-\end{figure}
+We also did some simple descriptive plots (for example the evolution of the S\&P 500 and the VIX), to have an intuition of the data before building models.
+
+% Example figure (optional)
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{sp500_close.png}
+%     \caption{Evolution of the S\&P 500 closing price over the sample period.}
+%     \label{fig:sp500_close}
+% \end{figure}
 
 % ---------- 3. EXPLORATION & FEATURES ----------
 \chapter{Exploratory Analysis and Feature Engineering}
 \label{chap:features}
 
-\section{S\&P 500 Returns and Volatility}
+In this chapter, we explain how we explored the data and which features we decided to build.
+We try to keep the explanation simple and focus on the main ideas.
 
-We compute daily returns of the S\&P 500 as
+\section{SP500 Returns and Volatility}
+
+First, we compute the daily returns of the S\&P 500:
 \begin{equation}
     r_t = \frac{P_t - P_{t-1}}{P_{t-1}} \times 100,
 \end{equation}
 where $P_t$ is the closing price at day $t$.
-We also compute a 30-day rolling historical volatility, annualised by $\sqrt{252}$.
+We plot the returns and their histogram.
+We observe that:
+\begin{itemize}
+    \item most of the time the returns are close to zero,
+    \item but there are some extreme days (especially during crises),
+    \item the distribution is roughly centred but with fat tails.
+\end{itemize}
 
-TODO: add plots of the return distribution and of the rolling volatility compared to the VIX.
+Then we compute a 30-day rolling volatility based on the returns, annualised by multiplying by $\sqrt{252}$ (approximate number of trading days in a year).
+We compare this historical volatility with the VIX.
+We see that they are related, but not identical:
+historical volatility uses past returns, while VIX is an implied volatility based on options prices.
 
 \section{Correlation Analysis}
 
-We perform a correlation analysis between VIX and all candidate variables using two approaches:
+To know which variables might be interesting, we compute correlation matrices.
+We do it in two ways:
 \begin{itemize}
-    \item correlations on \textbf{closing levels},
-    \item correlations on \textbf{daily returns}.
+    \item correlations using the \textbf{closing prices},
+    \item correlations using the \textbf{daily returns}.
 \end{itemize}
 
-Interactive heatmaps are implemented using \texttt{ipywidgets} to vary the time window.
-We observe that:
+We use heatmaps and interactive sliders (with \texttt{ipywidgets}) to see how correlations change depending on the period.
+
+The main observations are:
 \begin{itemize}
-    \item closing levels of several assets (e.g.\ gold, silver, aluminium, uranium, oil, interest rates, VVIX) exhibit non-negligible correlations with VIX;
-    \item daily returns show almost no stable correlation with VIX, which is expected given their noisy behaviour.
+    \item on closing prices, some assets show visible correlations with VIX (for example gold, silver, aluminium, uranium, oil, VVIX, interest rates);
+    \item on returns, most correlations are very close to zero, which matches the idea that daily returns are very noisy.
 \end{itemize}
 
-Based on this analysis, we keep a subset of variables that are either economically meaningful or display interesting correlations with VIX.
+Based on this, we decide to keep only a subset of assets and indicators that look the most relevant or that make economic sense.
 
-\section{Engineered Features}
+\section{Features We Created}
 
-For the S\&P 500 we construct:
+We build several new features to give more information to the models:
+
 \begin{itemize}
-    \item a 14-day Simple Moving Average (SMA) of the trading volume;
-    \item a 14-day Relative Strength Index (RSI) computed on the volume.
+    \item \textbf{SP500 features}:
+    \begin{itemize}
+        \item S\&P 500 close and volume,
+        \item a 14-day Simple Moving Average (SMA) of the volume,
+        \item a 14-day Relative Strength Index (RSI) computed on the volume.
+    \end{itemize}
+    \item \textbf{Volatility index}:
+    \begin{itemize}
+        \item VVIX close, which is the volatility of the VIX itself.
+    \end{itemize}
+    \item \textbf{Metals and energy}:
+    \begin{itemize}
+        \item aluminium close,
+        \item gold and silver,
+        \item oil and uranium.
+    \end{itemize}
+    \item \textbf{Interest rates}:
+    \begin{itemize}
+        \item US 10-year yield close.
+    \end{itemize}
 \end{itemize}
 
-Because some assets are strongly correlated (for example gold and silver, or oil and uranium), we apply Principal Component Analysis (PCA) to the pairs:
+We noticed that some variables are very correlated with each other, for example:
 \begin{itemize}
-    \item metals: (Gold, Silver) $\rightarrow$ Metal\_PC1, Metal\_PC2,
-    \item energy: (Oil, Uranium) $\rightarrow$ Energy\_PC1, Energy\_PC2.
+    \item gold and silver,
+    \item oil and uranium.
 \end{itemize}
 
-The first principal component in each pair captures most of the common variation (more than 80\%), while the second component is related to the spread between the two assets.
+To avoid giving almost duplicate information to the model, we apply Principal Component Analysis (PCA) on these pairs.
 
-% ---------- 4. PROBLEM FORMALIZATION & MODELS ----------
-\chapter{Problem Formalization and Models}
+\subsection{PCA on Metals and Energy}
+
+For the pair (gold, silver), we compute two principal components:
+\begin{itemize}
+    \item Metal\_PC1: a common factor of the two metals (it explains about 80\% of the variance),
+    \item Metal\_PC2: a factor related to the spread between gold and silver.
+\end{itemize}
+
+For the pair (oil, uranium), we do the same:
+\begin{itemize}
+    \item Energy\_PC1: a common energy factor (explains more than 90\% of the variance),
+    \item Energy\_PC2: a spread between oil and uranium.
+\end{itemize}
+
+In the end, we drop the original columns (gold, silver, oil, uranium) and keep only the PCA components to reduce redundancy.
+
+% ---------- 4. MODELS ----------
+\chapter{Modeling Approach}
 \label{chap:models}
 
 \section{Supervised Learning Setup}
 
-We formulate the task as a regression problem.
-Let $X_t$ denote the vector of explanatory variables at day $t$, including:
+We frame the problem as a regression task.
+For each day $t$, we build a feature vector $X_t$ that contains:
+
 \begin{itemize}
-    \item VVIX closing level,
-    \item S\&P 500 closing price and volume,
-    \item SMA and RSI of S\&P 500 volume,
-    \item Aluminium closing price,
-    \item 10-year US Treasury yield,
-    \item Metal\_PC1, Metal\_PC2,
-    \item Energy\_PC1, Energy\_PC2.
-\end{itemize}
-The target variable is the VIX closing level $Y_t$ at the same date.
-
-We split the dataset chronologically into a training set (80\%) and a test set (20\%), without shuffling, to respect the time-series structure.
-Features are standardised using a \texttt{StandardScaler} fitted on the training set only.
-
-\section{Models}
-
-We implement three regression models:
-\begin{itemize}
-    \item \textbf{Linear Regression}: a simple baseline model with no regularisation.
-    \item \textbf{Random Forest Regressor}: an ensemble of decision trees that can capture nonlinear effects and interactions.
-    \item \textbf{Gradient Boosting Regressor}: an additive ensemble model that sequentially fits trees to the residuals of previous trees.
+    \item VVIX closing value,
+    \item S\&P 500 close and volume,
+    \item SMA(14) and RSI(14) of the S\&P 500 volume,
+    \item aluminium close,
+    \item 10-year US yield close,
+    \item Metal\_PC1 and Metal\_PC2,
+    \item Energy\_PC1 and Energy\_PC2.
 \end{itemize}
 
-At this stage we use default hyperparameters from \texttt{scikit-learn} and do not perform an extensive hyperparameter search, which is left for future work.
+The target variable is the VIX closing value at the same date, $Y_t$.
+
+We split the dataset into a training set (80\%) and a test set (20\%), \textbf{without shuffling}, to respect the time order.
+We standardise the features with \texttt{StandardScaler}, fitting it on the training set and applying it to both train and test.
+
+\section{Models We Tried}
+
+We test three different models from \texttt{scikit-learn}:
+
+\begin{itemize}
+    \item \textbf{Linear Regression}:
+    a simple baseline model, easy to interpret.
+    \item \textbf{Random Forest Regressor}:
+    an ensemble of decision trees that can model non-linear relationships.
+    \item \textbf{Gradient Boosting Regressor}:
+    another tree-based ensemble model that builds trees sequentially to reduce the error.
+\end{itemize}
+
+At this stage, we mostly use default hyperparameters.
+We do not run a big hyperparameter search because the first results are already not very good, and we prefer to first understand the limitations of the current setup.
 
 % ---------- 5. RESULTS ----------
 \chapter{Results and Discussion}
@@ -196,7 +275,14 @@ At this stage we use default hyperparameters from \texttt{scikit-learn} and do n
 
 \section{Evaluation Metrics}
 
-We evaluate models using the Mean Squared Error (MSE), Root Mean Squared Error (RMSE) and coefficient of determination ($R^2$) on the test set.
+We evaluate the models on the test set with:
+\begin{itemize}
+    \item Mean Squared Error (MSE),
+    \item Root Mean Squared Error (RMSE),
+    \item $R^2$ score.
+\end{itemize}
+
+The table below shows the performance (values to be filled from our notebook):
 
 \begin{table}[H]
     \centering
@@ -213,65 +299,89 @@ We evaluate models using the Mean Squared Error (MSE), Root Mean Squared Error (
     \label{tab:results}
 \end{table}
 
-TODO: fill in the metrics from your code.
+(For example, in our experiments, we obtained an MSE around 8 and an $R^2$ around 0.03 for Linear Regression, and negative $R^2$ for the tree-based models.)
 
-\section{Interpretation of the Results}
+\section{What We Observe}
 
-In our experiments, the Linear Regression model achieves a very low $R^2$, close to zero, indicating that it explains only a small fraction of the variance of VIX.
-The Random Forest and Gradient Boosting models even obtain negative $R^2$ scores on the test set, which means that they perform worse than a naive baseline that always predicts the mean VIX value.
-
-These poor results suggest that:
+Our main observations are:
 \begin{itemize}
-    \item the relationship between our features and the daily VIX level is weak and highly noisy;
-    \item predicting the level of VIX at a daily frequency is intrinsically difficult;
-    \item using contemporaneous variables (same-day information) without lagged features limits the predictive power.
+    \item The Linear Regression model has a very low $R^2$ (close to zero), which means it almost does not explain the variability of VIX on the test set.
+    \item The Random Forest and Gradient Boosting models give negative $R^2$ on the test set, which is even worse than predicting the mean of the training data all the time.
 \end{itemize}
+
+In other words, none of our models is really able to predict the daily level of the VIX with good accuracy.
+
+\section{Why Is It So Hard?}
+
+We think there are several reasons for these poor performances:
+
+\begin{itemize}
+    \item \textbf{Very noisy target:} the VIX is a very reactive index. It can jump because of news or events that are not contained in our features.
+    \item \textbf{Same-day information only:} we use variables at day $t$ to predict VIX at day $t$. We do not include lagged values such as $VIX_{t-1}$ or past returns, which usually help a lot in time series.
+    \item \textbf{Model type:} we use standard regression models that are not specifically designed for financial time series or volatility modelling.
+    \item \textbf{Limited feature engineering:} even if we created several indicators, we probably miss some important information used by real practitioners (for example option-implied features, term structure of volatility, etc.).
+\end{itemize}
+
+Even if the results are disappointing from a prediction point of view, they are still useful for us as students, because they show the gap between a simple ML setup and the complexity of real financial data.
 
 % ---------- 6. LIMITATIONS & FUTURE WORK ----------
 \chapter{Limitations and Future Work}
 
-Several improvements could be explored:
+In this section, we list some ideas that we did not have time to implement but that could improve the model.
 
 \begin{itemize}
-    \item \textbf{Lagged features:} include lagged values of VIX, VVIX, S\&P 500 returns and other variables to better capture temporal dynamics.
-    \item \textbf{Alternative targets:} instead of predicting the level of VIX, predict its daily change or future realised volatility.
-    \item \textbf{Hyperparameter tuning:} use grid search or random search to optimise the hyperparameters of Random Forest and Gradient Boosting.
-    \item \textbf{Time-series specific models:} try ARIMA/GARCH models for volatility, or recurrent neural networks (LSTM/GRU) for multivariate time series.
-    \item \textbf{Regularisation and feature selection:} test Lasso or Ridge regression to reduce overfitting and identify the most important predictors.
+    \item \textbf{Add lagged features:} include $VIX_{t-1}$, $VIX_{t-2}$, lagged VVIX, past SP500 returns, etc.
+    This would allow the model to use temporal patterns.
+    \item \textbf{Change the target:} instead of predicting the level of VIX, we could try to predict the change in VIX (for example $VIX_t - VIX_{t-1}$) or future realised volatility.
+    \item \textbf{Hyperparameter tuning:} use grid search or random search to improve Random Forest and Gradient Boosting.
+    \item \textbf{Regularisation:} try Lasso or Ridge Regression to control overfitting and maybe identify more important features.
+    \item \textbf{Time series models:} explore models like ARIMA/GARCH or even LSTM networks, which are more adapted to time series.
 \end{itemize}
 
-These directions would help move from a standard baseline towards a more advanced solution, as required in the project guidelines.
+We see this project as a first step: we built a working pipeline, and now we know in which directions we could go further.
 
 % ---------- 7. CONCLUSION ----------
 \chapter{Conclusion}
 \label{chap:conclusion}
 
-In this project we investigated whether the VIX index can be predicted from market and macroeconomic variables such as equity indices, commodities, energy prices, interest rates and the VVIX index.
-We built a daily dataset from 2020 to 2023, performed exploratory analysis and feature engineering, and trained several regression models.
+In this project, we tried to predict the VIX index using different financial variables:
+equity market data, commodities, energy prices, interest rates and the VVIX index.
+We collected real data, explored it, created features, and trained several regression models.
 
-Our models achieved low predictive performance on the test set, highlighting the difficulty of forecasting daily VIX levels with this type of information and without explicitly modelling time dependence.
-Nevertheless, the project allowed us to practise the full machine learning pipeline: data collection, cleaning, feature engineering, dimensionality reduction, model training and critical evaluation.
-Future work could focus on lagged features, alternative targets and more advanced time-series models.
+Our main conclusion is that predicting the daily level of VIX in this way is very difficult.
+Our models do not perform well on the test set, and sometimes do worse than a naive baseline.
+However, this does not mean the project is a failure.
+On the contrary, we learned a lot about:
+
+\begin{itemize}
+    \item how to build a dataset from raw financial data,
+    \item how to analyse correlations and reduce dimensions with PCA,
+    \item how to correctly split and scale data for time series,
+    \item and how to interpret evaluation metrics and understand model limitations.
+\end{itemize}
+
+If we had more time, we would focus on adding lagged features, testing other targets and trying time-series-specific models.
+Overall, this project helped us to think more like data scientists and to see the difference between theory and real-world data.
 
 % ---------- REFERENCES ----------
 \begin{thebibliography}{9}
 
 \bibitem{vix_cboe}
-CBOE,
-\textit{VIX White Paper},
+CBOE,\\
+\textit{VIX White Paper},\\
 Available online: \url{https://www.cboe.com/}.
 
 \bibitem{yfinance}
-Ran Aroussi,
-\textit{yfinance: Download market data from Yahoo! Finance's API},
+Ran Aroussi,\\
+\textit{yfinance: Download market data from Yahoo! Finance's API},\\
 GitHub repository.
 
 \bibitem{datahub_sp500}
-DataHub,
-\textit{S\&P 500 companies with financial information},
+DataHub,\\
+\textit{S\&P 500 companies with financial information},\\
 Available online.
 
-% Add any scientific papers you decide to use as reference.
+% Add any extra references you used, for example articles on VIX or volatility modelling.
 
 \end{thebibliography}
 
