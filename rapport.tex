@@ -55,7 +55,6 @@ In the conclusion, we discuss why this happens and how we could improve the appr
 
 \newpage
 
-% ---------- 1. INTRODUCTION ----------
 \chapter{Introduction}
 
 In this project, we study the VIX, which is the volatility index of the S\&P 500.
@@ -87,7 +86,7 @@ In Chapter~\ref{chap:models}, we explain our modelling choices.
 In Chapter~\ref{chap:results}, we show the results and discuss them.
 Finally, in Chapter~\ref{chap:conclusion}, we summarise what we learned and give ideas for future work.
 
-% ---------- 2. DATASET ----------
+
 \chapter{Dataset and Data Sources}
 \label{chap:data}
 
@@ -130,7 +129,6 @@ We also did some simple descriptive plots (for example the evolution of the S\&P
 %     \label{fig:sp500_close}
 % \end{figure}
 
-% ---------- 3. EXPLORATION & FEATURES ----------
 \chapter{Exploratory Analysis and Feature Engineering}
 \label{chap:features}
 
@@ -227,7 +225,6 @@ For the pair (oil, uranium), we do the same:
 
 In the end, we drop the original columns (gold, silver, oil, uranium) and keep only the PCA components to reduce redundancy.
 
-% ---------- 4. MODELS ----------
 \chapter{Modeling Approach}
 \label{chap:models}
 
@@ -267,7 +264,6 @@ We test three different models from \texttt{scikit-learn}:
 At this stage, we mostly use default hyperparameters.
 We do not run a big hyperparameter search because the first results are already not very good, and we prefer to first understand the limitations of the current setup.
 
-% ---------- 5. RESULTS ----------
 \chapter{Results and Discussion}
 \label{chap:results}
 
@@ -322,7 +318,6 @@ We think there are several reasons for these poor performances:
 
 Even if the results are disappointing from a prediction point of view, they are still useful for us as students, because they show the gap between a simple ML setup and the complexity of real financial data.
 
-% ---------- 6. LIMITATIONS & FUTURE WORK ----------
 \chapter{Limitations and Future Work}
 
 In this section, we list some ideas that we did not have time to implement but that could improve the model.
@@ -338,7 +333,6 @@ In this section, we list some ideas that we did not have time to implement but t
 
 We see this project as a first step: we built a working pipeline, and now we know in which directions we could go further.
 
-% ---------- 7. CONCLUSION ----------
 \chapter{Conclusion}
 \label{chap:conclusion}
 
